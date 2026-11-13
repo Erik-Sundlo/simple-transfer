@@ -100,11 +100,16 @@ test('saving edits updates the selected connection and preserves its stored pass
     username: 'test', auth: 'password', password: 'stored-test-password',
   };
   const id = await store.save(input, await store.resolve(input));
-  const edited = { ...input, savedId: id, name: 'Renamed', password: '' };
+  const edited = {
+    ...input, savedId: id, name: 'Renamed', password: '',
+    useProxy: true, proxyHost: '127.0.0.1', proxyPort: 12345,
+  };
   assert.equal(await store.save(edited, await store.resolve(edited)), id);
   const reloaded = new ConnectionStore(filename, storage);
   await reloaded.load();
   assert.equal(reloaded.list().length, 1);
   assert.equal(reloaded.list()[0].name, 'Renamed');
   assert.equal((await reloaded.resolve(edited)).password, input.password);
+  assert.equal(reloaded.list()[0].useProxy, true);
+  assert.equal(reloaded.list()[0].proxyPort, 12345);
 });

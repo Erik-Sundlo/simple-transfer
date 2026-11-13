@@ -47,6 +47,14 @@
       </div>
       <div class="connect-actions"><button id="save-connection" type="button" title="Save details and credentials without connecting">Save connection</button><button id="connect" class="primary" type="submit">Connect</button><button id="disconnect" type="button" disabled>Disconnect</button></div>
     </div>
+    <div id="proxy-section" class="proxy-section">
+      <label class="proxy-toggle"><input id="use-proxy" type="checkbox">Use SSH tunnel (SOCKS5)</label>
+      <div id="proxy-fields" class="proxy-fields" hidden>
+        <label>Proxy host<input id="proxy-host" value="127.0.0.1" spellcheck="false" autocomplete="off"></label>
+        <label class="proxy-port">Proxy port<input id="proxy-port" type="number" min="1" max="65535" value="1080"></label>
+        <span class="hint">Keep the server's own hostname and SSH port above. DNS resolves through the tunnel.</span>
+      </div>
+    </div>
     <p class="hint" id="security-note">Saved passwords and imported SSH keys use macOS Keychain-backed encryption.</p>
   </form>
 

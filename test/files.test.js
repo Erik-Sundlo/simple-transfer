@@ -16,6 +16,11 @@ test('connection validation handles protocol defaults and rejects malformed inpu
     { host: 'sftp://example.com' }, { host: 'example.com\r\nBAD' },
     { port: 0 }, { port: 65536 }, { port: 2.5 }, { username: 'user\nBAD' },
     { protocol: 'http' }, { auth: 'key', keyPath: '' },
+    { useProxy: true, proxyHost: '', proxyPort: 1080 },
+    { useProxy: true, proxyHost: 'socks://localhost', proxyPort: 1080 },
+    { useProxy: true, proxyHost: '127.0.0.1', proxyPort: 0 },
+    { useProxy: true, proxyHost: '127.0.0.1', proxyPort: 65536 },
+    { protocol: 'ftp', useProxy: true, proxyHost: '127.0.0.1', proxyPort: 1080 },
   ]) assert.throws(() => validateConnection({ ...input, ...bad }));
 });
 

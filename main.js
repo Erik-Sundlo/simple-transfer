@@ -136,6 +136,7 @@ function registerIPC() {
   handle('list-local', (directory) => listLocal(directory), true);
   handle('list-remote', (directory) => connected().list(directory), true);
   handle('connect', async (input) => {
+    send('connection-status', 'Loading credentials. Check for a macOS Keychain prompt...');
     const config = await connections.resolve(input);
     if (input.remember) connections.requireEncryption();
     if (config.protocol === 'ftp') {
@@ -153,11 +154,13 @@ function registerIPC() {
     const next = new TransferSession({
       verifyHost,
       onProgress: (value) => send('transfer-progress', value),
+      onStatus: (value) => send('connection-status', value),
       onClose: () => { if (session === next) send('disconnected'); },
     });
     session = next;
     try {
       const home = await next.connect(config);
+      send('connection-status', 'Reading remote folder...');
       const listing = await next.list(home);
       const savedId = input.remember ? await connections.save(input, config) : null;
       return { listing, savedId, profiles: connections.list() };

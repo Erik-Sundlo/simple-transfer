@@ -19,6 +19,11 @@ contextBridge.exposeInMainWorld('transfer', {
   upload: invoke('upload'),
   download: invoke('download'),
   mkdir: invoke('mkdir'),
+  onConnectionStatus: (callback) => {
+    const listener = (_event, value) => callback(value);
+    ipcRenderer.on('connection-status', listener);
+    return () => ipcRenderer.removeListener('connection-status', listener);
+  },
   onProgress: (callback) => {
     const listener = (_event, value) => callback(value);
     ipcRenderer.on('transfer-progress', listener);

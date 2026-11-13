@@ -50,6 +50,23 @@ remote file, so an interrupted upload may leave a partial remote file.
 Disconnect stops the active transfer. Folder transfers, synchronization, deletion,
 and file editing are intentionally not included.
 
+## SSH tunnels
+
+For SFTP through an existing SSH dynamic-forward tunnel (`ssh -D`), enable
+**Use SSH tunnel (SOCKS5)** and enter the tunnel's local proxy address and port.
+Keep the destination server's hostname and SSH port in the normal connection
+fields. Hostname resolution happens at the proxy, so internal-only hostnames
+work. Proxy settings are saved with the connection. The app does not automatically
+use macOS browser proxy/PAC settings or start/manage the SSH tunnel itself.
+
+For a local port forward (`ssh -L`), leave SOCKS5 disabled and connect to
+`127.0.0.1` with the forwarded local port instead.
+
+Connection stages are displayed in the status bar. SSH and SOCKS5 negotiation,
+SFTP subsystem startup, and directory requests have bounded waits. Disconnect
+also cancels an in-progress tunnel connection. SOCKS5 currently supports
+unauthenticated proxies for SFTP only; FTP/FTPS continue to connect directly.
+
 ## Connection safety
 
 - Saved passwords, imported private keys, and key passphrases are encrypted with

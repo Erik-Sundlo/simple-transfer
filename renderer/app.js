@@ -2,6 +2,7 @@ const api = window.transfer;
 const $ = (id) => document.getElementById(id);
 const state = {
   connected: false,
+  connecting: false,
   busy: false,
   profiles: [],
   selectedId: '',
@@ -25,7 +26,7 @@ function bytes(value) {
 
 function syncControls() {
   const busy = state.busy;
-  for (const id of ['new-connection', 'save-connection', 'connection-name', 'remember', 'protocol', 'host', 'port', 'username', 'auth', 'password', 'key-path', 'passphrase', 'choose-key', 'connect']) {
+  for (const id of ['new-connection', 'save-connection', 'connection-name', 'remember', 'protocol', 'host', 'port', 'username', 'auth', 'password', 'key-path', 'passphrase', 'choose-key', 'connect', 'use-proxy', 'proxy-host', 'proxy-port']) {
     $(id).disabled = busy || state.connected;
   }
   $('forget-connection').disabled = busy || state.connected || !state.selectedId;
@@ -34,6 +35,7 @@ function syncControls() {
     button.setAttribute('aria-pressed', String(button.dataset.id === state.selectedId));
   }
   $('disconnect').disabled = !state.connected && !busy;
+  $('disconnect').textContent = state.connecting ? 'Cancel connection' : 'Disconnect';
   for (const side of ['local', 'remote']) {
     for (const suffix of ['up', 'path', 'go', 'refresh', 'all', 'mkdir']) {
       $(`${side}-${suffix}`).disabled = busy || (side === 'remote' && !state.connected);
@@ -43,7 +45,7 @@ function syncControls() {
   $('upload').disabled = busy || !state.connected || !state.local.selected.size;
   $('download').disabled = busy || !state.connected || !state.remote.selected.size;
   for (const element of document.querySelectorAll('tbody input, tbody button')) element.disabled = busy;
-  $('connection-state').textContent = state.connected ? 'Connected' : 'Not connected';
+  $('connection-state').textContent = state.connecting ? 'Connecting...' : state.connected ? 'Connected' : 'Not connected';
   $('connection-state').classList.toggle('connected', state.connected);
 }
 
@@ -169,6 +171,11 @@ function updateAuth() {
   $('auth-field').hidden = !sftp;
   $('key-field').hidden = !key;
   $('password-field').hidden = key;
+  $('proxy-section').hidden = !sftp;
+  const proxy = sftp && $('use-proxy').checked;
+  $('proxy-fields').hidden = !proxy;
+  $('proxy-host').required = proxy;
+  $('proxy-port').required = proxy;
   const saved = state.profiles.find((item) => item.id === state.selectedId);
   $('key-path').required = key && !saved?.hasKey;
   $('security-note').textContent = $('protocol').value === 'ftp'
@@ -191,6 +198,7 @@ function updateProfiles(profiles, selected = '') {
     const details = document.createElement('span');
     details.className = 'subtle';
     details.textContent = `${profile.protocol.toUpperCase()} / ${profile.username}@${profile.host}:${profile.port}`;
+    if (profile.useProxy) details.textContent += ' / SOCKS5';
     button.append(name, details);
     button.addEventListener('click', () => {
       if (state.busy) return;
@@ -224,6 +232,9 @@ function chooseProfile() {
   $('port').value = profile?.port || 22;
   $('username').value = profile?.username || '';
   $('auth').value = profile?.auth || 'password';
+  $('use-proxy').checked = profile?.useProxy || false;
+  $('proxy-host').value = profile?.proxyHost || '127.0.0.1';
+  $('proxy-port').value = profile?.proxyPort || 1080;
   $('key-path').value = '';
   $('key-path').placeholder = profile?.hasKey ? `Stored key: ${profile.keyLabel}` : 'Choose a private SSH key';
   $('password').value = '';
@@ -272,6 +283,7 @@ $('protocol').addEventListener('change', () => {
   updateAuth();
 });
 $('auth').addEventListener('change', updateAuth);
+$('use-proxy').addEventListener('change', updateAuth);
 $('choose-key').addEventListener('click', () => run(async () => {
   const file = await api.chooseKey();
   if (file) $('key-path').value = file;
@@ -291,11 +303,16 @@ function connectionInput() {
     username: $('username').value, auth: $('auth').value,
     keyPath: $('key-path').value, password: $('password').value, passphrase: $('passphrase').value,
     savedId: state.selectedId, name: $('connection-name').value, remember: $('remember').checked,
+    useProxy: $('protocol').value === 'sftp' && $('use-proxy').checked,
+    proxyHost: $('proxy-host').value, proxyPort: $('proxy-port').value,
   };
 }
 
 function connectToServer() {
+  if (state.busy) return;
+  state.connecting = true;
   return run(async () => {
+    $('progress').hidden = false;
     const input = connectionInput();
     if (state.connected) {
       await api.disconnect();
@@ -315,7 +332,10 @@ function connectToServer() {
     render('remote', result.listing);
     $('remote-label').textContent = `${input.username}@${input.host}`;
     status(`Connected to ${input.host}.`);
-  }, 'Connecting...');
+  }, 'Connecting...').finally(() => {
+    state.connecting = false;
+    syncControls();
+  });
 }
 $('disconnect').addEventListener('click', async () => {
   try {
@@ -380,6 +400,7 @@ $('folder-form').addEventListener('submit', (event) => {
 });
 
 let lastProgress = 0;
+api.onConnectionStatus((message) => status(message));
 api.onProgress(({ name, bytes: count }) => {
   const now = Date.now();
   if (count !== 0 && now - lastProgress < 100) return;
