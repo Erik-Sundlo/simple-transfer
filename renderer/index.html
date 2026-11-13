@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simple Transfer</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header>
+    <div><h1>Simple Transfer</h1><p>Just connect. Browse. Move files.</p></div>
+    <span id="connection-state" class="badge">Not connected</span>
+  </header>
+  <section class="connection-library" aria-label="Saved connections">
+    <div class="library-heading">
+      <h2>Saved connections <span class="subtle">Double-click to connect</span></h2>
+      <button id="new-connection" type="button">New connection</button>
+    </div>
+    <div id="saved-connections" class="connection-list" aria-label="Saved connection list"></div>
+    <p id="connections-empty" class="hint">No saved connections yet. Enter your details below and choose Save connection.</p>
+  </section>
+  <form id="connect-form" class="connection-card">
+    <div class="connection-settings">
+      <label>Connection name<input id="connection-name" placeholder="e.g. Work server" autocomplete="off"></label>
+      <button id="forget-connection" type="button" disabled>Forget</button>
+      <label class="remember-label"><input id="remember" type="checkbox" checked>Remember login and SSH key</label>
+    </div>
+    <div class="connection-fields">
+      <label>Protocol<select id="protocol">
+        <option value="sftp">SFTP (SSH)</option>
+        <option value="ftps">FTPS (explicit TLS)</option>
+        <option value="ftps-implicit">FTPS (implicit TLS)</option>
+        <option value="ftp">FTP (unencrypted)</option>
+      </select></label>
+      <label class="host-field">Host<input id="host" placeholder="sftp.example.com" required spellcheck="false" autocomplete="off"></label>
+      <label class="port-field">Port<input id="port" type="number" min="1" max="65535" value="22" required></label>
+      <label>Username<input id="username" required spellcheck="false" autocomplete="off"></label>
+      <label id="auth-field">Authentication<select id="auth"><option value="password">Password</option><option value="key">SSH key</option></select></label>
+    </div>
+    <div class="credentials">
+      <label id="password-field">Password<input id="password" type="password" autocomplete="off"></label>
+      <div id="key-field" class="key-field" hidden>
+        <label>Private key<div class="inline"><input id="key-path" placeholder="Choose a private SSH key" spellcheck="false"><button id="choose-key" type="button">Browse...</button></div></label>
+        <label>Key passphrase (if needed)<input id="passphrase" type="password" autocomplete="off"></label>
+      </div>
+      <div class="connect-actions"><button id="save-connection" type="button" title="Save details and credentials without connecting">Save connection</button><button id="connect" class="primary" type="submit">Connect</button><button id="disconnect" type="button" disabled>Disconnect</button></div>
+    </div>
+    <p class="hint" id="security-note">Saved passwords and imported SSH keys use macOS Keychain-backed encryption.</p>
+  </form>
+
+  <main>
+    <section class="file-pane" id="local-pane" aria-label="Local files">
+      <div class="pane-heading"><h2>On this Mac</h2><button id="choose-local" type="button">Choose folder...</button></div>
+      <form class="path-bar" id="local-path-form">
+        <button id="local-up" type="button" title="Parent folder" aria-label="Local parent folder">Up</button>
+        <input id="local-path" aria-label="Local directory" spellcheck="false">
+        <button id="local-go" type="submit" title="Open folder">Go</button>
+        <button id="local-refresh" type="button" title="Refresh">Refresh</button>
+      </form>
+      <div class="file-list" tabindex="0" aria-label="Local file list">
+        <table aria-label="Local files"><thead><tr><th class="select-column"><input id="local-all" type="checkbox" aria-label="Select all local files"></th><th>Name</th><th class="size-column">Size</th><th class="date-column">Modified</th></tr></thead><tbody id="local-files"></tbody></table>
+        <p id="local-empty" class="empty" hidden>This folder is empty.</p>
+      </div>
+      <div class="pane-footer"><span id="local-count">Loading...</span><button id="local-mkdir" type="button">New folder</button></div>
+    </section>
+    <div class="transfer-actions">
+      <button id="upload" class="primary" type="button" disabled>Upload →</button>
+      <button id="download" type="button" disabled>← Download</button>
+      <p>Files only.<br>Double-click folders to open.</p>
+    </div>
+    <section class="file-pane" id="remote-pane" aria-label="Remote files">
+      <div class="pane-heading"><h2>On the server</h2><span id="remote-label" class="subtle">No connection</span></div>
+      <form class="path-bar" id="remote-path-form">
+        <button id="remote-up" type="button" title="Parent folder" aria-label="Remote parent folder" disabled>Up</button>
+        <input id="remote-path" aria-label="Remote directory" spellcheck="false" placeholder="Connect to browse" disabled>
+        <button id="remote-go" type="submit" title="Open folder" disabled>Go</button>
+        <button id="remote-refresh" type="button" title="Refresh" disabled>Refresh</button>
+      </form>
+      <div class="file-list" tabindex="0" aria-label="Remote file list">
+        <table aria-label="Remote files"><thead><tr><th class="select-column"><input id="remote-all" type="checkbox" aria-label="Select all remote files" disabled></th><th>Name</th><th class="size-column">Size</th><th class="date-column">Modified</th></tr></thead><tbody id="remote-files"></tbody></table>
+        <p id="remote-empty" class="empty">Your server's files will appear here.</p>
+      </div>
+      <div class="pane-footer"><span id="remote-count">Not connected</span><button id="remote-mkdir" type="button" disabled>New folder</button></div>
+    </section>
+  </main>
+  <footer>
+    <div id="status" role="status" aria-live="polite">Ready.</div>
+    <progress id="progress" aria-label="Transfer in progress" hidden></progress>
+  </footer>
+
+  <dialog id="folder-dialog">
+    <form id="folder-form">
+      <h2>New folder</h2>
+      <label>Folder name<input id="folder-name" required autocomplete="off" spellcheck="false"></label>
+      <div class="dialog-actions"><button id="folder-cancel" type="button">Cancel</button><button class="primary" type="submit">Create</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

@@ -1,0 +1,43 @@
+{
+  "name": "simple-transfer",
+  "version": "0.1.0",
+  "description": "A small two-pane SFTP and FTP/FTPS client for macOS.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test",
+    "check": "node --check main.js && node --check preload.js && node --check lib/session.js && node --check lib/files.js && node --check lib/connections.js && node --check renderer/app.js",
+    "smoke": "electron . --smoke-test",
+    "smoke:ui": "electron scripts/ui-smoke.js",
+    "pack": "electron-builder --mac dir",
+    "dist": "electron-builder --mac dmg"
+  },
+  "dependencies": {
+    "basic-ftp": "^6.2.6",
+    "ssh2": "^1.17.0"
+  },
+  "devDependencies": {
+    "electron": "^42.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "local.simple-transfer",
+    "productName": "Simple Transfer",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "lib/**/*",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": "dmg",
+      "identity": null
+    }
+  }
+}
